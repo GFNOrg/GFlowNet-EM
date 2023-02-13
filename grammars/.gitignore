@@ -1,0 +1,8 @@
+*.pt.*
+ckpts*
+__pycache__
+wandb
+logs
+*.out
+decoded_results
+*.pt
