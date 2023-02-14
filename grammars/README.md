@@ -54,12 +54,10 @@ python -Ou train.py --cuda --temperature 1000 --go_back_and_forward 0 --mc_em --
 
 ## Citation
 ```
-@misc{hu2023gflownetem,
-    title={GFlowNet-EM for Learning Compositional Latent Variable Models},
+@article{hu2023gflownetem,
+    title={{GFlowNet-EM} for Learning Compositional Latent Variable Models},
     author={Hu, Edward and Malkin, Nikolay and Jain, Moksh and Everett, Katie and Graikos, Alexandros and Bengio, Yoshua},
     year={2023},
-    eprint={23XX.XXXXX},
-    archivePrefix={arXiv},
-    primaryClass={cs.CL}
+    journal={arXiv preprint arXiv:2302.06576}
 }
 ```
