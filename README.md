@@ -4,7 +4,7 @@ This repository contains code for our paper
 
 **GFlowNet-EM for Learning Compositional Latent Variable Models** <br>
 *Edward J. Hu\*, Nikolay Malkin\*, Moksh Jain, Katie Everett, Alexandros Graikos, Yoshua Bengio* <br>
-Paper: https://arxiv.org/abs/23XX.XXXXX <br>
+Paper: https://arxiv.org/abs/2302.06576 <br>
 
 We provide code for the three experiment domains studied:
 * Illustrative experiment with Gaussian mixtures (`toy_gaussians`),

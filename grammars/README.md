@@ -5,7 +5,7 @@ This directory contains the source code to reproduce the grammar induction exper
 
 **GFlowNet-EM for Learning Compositional Latent Variable Models** <br>
 *Edward J. Hu\*, Nikolay Malkin\*, Moksh Jain, Katie Everett, Alexandros Graikos, Yoshua Bengio* <br>
-Paper: https://arxiv.org/abs/23XX.XXXXX <br>
+Paper: https://arxiv.org/abs/2302.06576 <br>
 
 We provide commands for learning either a context-free grammar or a non-context-free grammar where rule expansions depend on the parent of the LHS of the rule.
 You can optionally specify an enegy-based model (EBM) as a prior to bias the learned grammar.
