@@ -1714,6 +1714,7 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
                 )
                 sleep_mle_loss.backward()
 
+            # adaptive E-step
             F_db_loss_smoothed = (
                 F_db_loss_smoothed * args.threshold_beta
                 + F_db_loss.item() * (1 - args.threshold_beta)
@@ -1730,6 +1731,8 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
             update_grammar_next = (
                 not (args.train_gfn) or F_db_loss_smoothed < tb_threshold
             )
+
+            # M-step
             if (
                 args.train_grammar
                 and update_grammar
