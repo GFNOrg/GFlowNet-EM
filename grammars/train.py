@@ -156,9 +156,6 @@ parser.add_argument("--warmup", type=int, default=40, help="step of warmup from 
 parser.add_argument(
     "--train_grammar", type=int, default=1, help="whether to train the neural grammar"
 )
-parser.add_argument(
-    "--tjb_backward", type=int, default=0, help="go backward from known terminal states"
-)
 parser.add_argument("--tjb_forward", type=int, default=1, help="go forward from s_0")
 parser.add_argument(
     "--go_back_and_forward",
@@ -847,7 +844,7 @@ def decode_and_evaluate(original_seq, gold_spans):
             seq_type="all_root",
             temp_cond=0 if args.temp_cond_prob > 0 else None,
         )
-        if args.tjb_backward == 1 or args.tjb_forward >= 1:
+        if args.tjb_forward >= 1:
             estimated_ll = model_flow(encoded_tokens, pad_mask=pad_mask)
         else:
             estimated_ll = encoded_tokens.new_zeros(len(encoded_tokens))
@@ -1169,8 +1166,6 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
     first_loss = None
     global global_step
     total_PCFG_loss = 0  # scalar for logging
-    total_LLLB_loss = 0
-    total_B_db_loss = 0
     total_F_db_loss = 0
     total_BF_db_loss = 0
     total_sleep_mle_loss = 0
@@ -1220,8 +1215,6 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
 
             PCFG_loss = 0
             F_db_loss = torch.tensor(0.0)
-            B_db_loss = 0
-            LLLB_loss = 0
             BF_db_loss = 0
             sleep_mle_loss = 0
             forward_steps = 0
@@ -1798,14 +1791,8 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
             total_PCFG_loss += (
                 PCFG_loss.item() if type(PCFG_loss) is torch.Tensor else PCFG_loss
             )
-            total_LLLB_loss += (
-                LLLB_loss.item() if type(LLLB_loss) is torch.Tensor else LLLB_loss
-            )
             total_F_db_loss += (
                 F_db_loss.item() if type(F_db_loss) is torch.Tensor else F_db_loss
-            )
-            total_B_db_loss += (
-                B_db_loss.item() if type(B_db_loss) is torch.Tensor else B_db_loss
             )
             total_BF_db_loss += (
                 BF_db_loss.item() if type(BF_db_loss) is torch.Tensor else BF_db_loss
@@ -1817,7 +1804,7 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
             )
 
             epoch_loss += (
-                LLLB_loss + B_db_loss + F_db_loss + BF_db_loss + total_sleep_mle_loss
+                F_db_loss + BF_db_loss + total_sleep_mle_loss
             ).item()
             forward_steps_list.append(forward_steps)
             backward_steps_list.append(backward_steps)
@@ -1874,8 +1861,6 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
                 if total_PCFG_updates > 0
                 else float("nan")
             )
-            cur_LLLB_loss = total_LLLB_loss / min(args.log_interval, sent_id)
-            cur_B_db_loss = total_B_db_loss / min(args.log_interval, sent_id)
             cur_F_db_loss = total_F_db_loss / min(args.log_interval, sent_id)
             cur_BF_db_loss = total_BF_db_loss / min(args.log_interval, sent_id)
             cur_sleep_mle_loss = total_sleep_mle_loss / min(args.log_interval, sent_id)
@@ -1885,7 +1870,6 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
                 f"| epoch {epoch:3d} | {sent_id:5d}/{len(train_dataloader):5d} batches "
                 + f"| lr {get_lr():.6f} | s/batch {elapsed / args.log_interval:5.2f} "
                 + (f"| PCFG {cur_PCFG_loss:5.2f} " if args.train_grammar else "")
-                + (f"| B-TB {cur_B_db_loss:5.2f} " if args.tjb_backward else "")
                 + (f"| F-TB {cur_F_db_loss:5.2f} " if args.tjb_forward else "")
                 + (
                     f"| BnF-TB {cur_BF_db_loss:5.2f} "
@@ -1895,7 +1879,7 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
                 + (f"| SMLE {cur_sleep_mle_loss:5.2f} " if args.sleep_mle else "")
                 + (
                     f"| Z {np.mean(Z) / args.reward_scale:4.2f} "
-                    if args.tjb_forward or args.tjb_backward
+                    if args.tjb_forward 
                     else ""
                 )
                 + (
@@ -1912,12 +1896,12 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
                     f"| PCFG update freq {cur_PCFG_update_freq:1.2f} | Total PCFG update {global_grammar_updates}"
                 )
                 + (f"| min F_db {F_db_loss_min}")
-                + f"| loss {cur_LLLB_loss+cur_B_db_loss+cur_F_db_loss+cur_BF_db_loss:5.2f}"
+                + f"| loss {cur_F_db_loss+cur_BF_db_loss:5.2f}"
             )
             start_time = time.time()
             if first_loss is None:
                 first_loss = (
-                    cur_LLLB_loss + cur_B_db_loss + cur_F_db_loss + cur_sleep_mle_loss
+                    cur_F_db_loss + cur_sleep_mle_loss
                 )
             wandb.log(
                 dict(
@@ -1926,9 +1910,7 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
                     per_step_F_DB=cur_F_db_loss,
                     per_step_BF_DB=cur_BF_db_loss,
                     per_step_sleep_mle=cur_sleep_mle_loss,
-                    per_step_loss=cur_LLLB_loss
-                    + cur_B_db_loss
-                    + cur_F_db_loss
+                    per_step_loss=cur_F_db_loss
                     + cur_BF_db_loss
                     + cur_sleep_mle_loss,
                     per_grammar_loss=cur_PCFG_loss,
@@ -1937,8 +1919,6 @@ def train(epoch, optimizers, schedulers, uniform_pos=False, max_len=9999):
                 )
             )
             total_PCFG_loss = 0.0
-            total_LLLB_loss = 0.0
-            total_B_db_loss = 0.0
             total_F_db_loss = 0.0
             total_BF_db_loss = 0.0
             total_sleep_mle_loss = 0.0
@@ -2123,7 +2103,7 @@ if args.resume_dir:
         else:
             model_shared_embedding.load_state_dict(checkpoint["model_shared_embedding"])
             model_encoder.load_state_dict(checkpoint["model_encoder"])
-            if args.tjb_backward == 1 or args.tjb_forward >= 1:
+            if args.tjb_forward >= 1:
                 model_flow.load_state_dict(checkpoint["model_flow"])
             model_forward.load_state_dict(checkpoint["model_forward"])
             model_backward.load_state_dict(checkpoint["model_backward"])
