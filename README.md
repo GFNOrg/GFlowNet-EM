@@ -16,11 +16,12 @@ Please visit the individual directories for instructions on reproducing the resu
 ## Citation
 
 ```
-@article{hu2023gflownetem,
-    title={{GFlowNet-EM} for Learning Compositional Latent Variable Models},
-    author={Hu, Edward and Malkin, Nikolay and Jain, Moksh and Everett, Katie and Graikos, Alexandros and Bengio, Yoshua},
-    year={2023},
-    journal={arXiv preprint arXiv:2302.06576}
+@inproceedings{hu2023gflownetem,
+title={{GFlowNet-EM} for Learning Compositional Latent Variable Models},
+author={Hu, Edward J and Malkin, Nikolay and Jain, Moksh and Everett, Katie and Graikos, Alexandros and Bengio, Yoshua},
+booktitle={International Conference on Machine Learning},
+year={2023},
+url={https://arxiv.org/abs/2302.06576}
 }
 ```
 Please contact us or post an issue if you have any questions.
