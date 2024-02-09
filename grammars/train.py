@@ -10,6 +10,7 @@ import torch
 import torch.optim as optim
 import numpy as np
 import scipy
+import pandas as pd
 from itertools import chain
 
 try:
@@ -346,7 +347,7 @@ wandb.init(
     config=args_dict,
     tags=[args.wandb_tag],
     id=exp_id,
-    mode="offline" if args.use_wandb else "disabled",
+    mode="online" if args.use_wandb else "disabled",
 )
 wandb.define_metric("train_loss", summary="min", step_metric="epoch")
 wandb.define_metric("val_marginal_nll", summary="min", step_metric="grammar_step")
@@ -911,6 +912,7 @@ def decode_and_evaluate(original_seq, gold_spans):
             "\t",
             forward_seq[0]._state[0].print(tostr=overall_tokenizer),
         )
+        
         # sample_parse = None
         sampler_ll = controller.calc_log_reward(forward_seq)
         parse_table.add_data(
@@ -919,6 +921,7 @@ def decode_and_evaluate(original_seq, gold_spans):
             f"{sampler_ll[0]:2.3f}",
             forward_seq[0]._state[0].print(tostr=overall_tokenizer),
         )
+        all_parses = [(forward_seq[i]._state[0].print(tostr=overall_tokenizer), estimated_ll[i], sampler_ll[i]) for i in range(len(forward_seq))]
         # spans and tags
         tags = []
         for i, seq in enumerate(forward_seq):
@@ -937,6 +940,7 @@ def decode_and_evaluate(original_seq, gold_spans):
             forward_logp = sampler_ll.new_zeros(sampler_ll.shape)
             backward_logp = sampler_ll.new_zeros(sampler_ll.shape)
             sample_parse = None
+            all_parses = []
 
     # calculate the F1 for the most likely parse from the grammar
     if args.grammar_type == "ncfg":
@@ -953,6 +957,7 @@ def decode_and_evaluate(original_seq, gold_spans):
         (sampled_parse_f1s, max_parse_f1s),
         tags[tags.nonzero()],
         sample_parse,
+        all_parses
     )
 
 
@@ -969,6 +974,7 @@ def valid():
     tag_bincount = None
     lengths = []
     sample_parses = []
+    parses = []
     iterable = (
         zip(val_dataloader, val_spans_dataloader)
         if args.use_spans_f1
@@ -1022,8 +1028,10 @@ def valid():
             f1_stats,
             batch_tags,
             sample_parse,
+            all_parses
         ) = decode_and_evaluate(forward_seq, gold_span)
         sample_parses.append(sample_parse)
+        parses.extend(all_parses)
         if args.use_spans_f1:
             sample_sent_f1.extend(f1_stats[0][0])
             max_sent_f1.extend(f1_stats[1][0])
@@ -1088,6 +1096,7 @@ def valid():
         "spearman_corr": spearman_corr,
         "tag_bincount": tag_bincount[: args.extra_nts - args.num_pts],
         "sample_parses": sample_parses,
+        "all_parses": parses,
     }
     # log tag counts
     tag_dist_table.add_data(
@@ -2248,6 +2257,11 @@ try:
                     checkpoint,
                     os.path.join(args.save_dir, exp_id, f"checkpoint_best.pt"),
                 )
+                
+                # parses = val_ll_stats["all_parses"]
+                # df = pd.DataFrame(parses)
+                # df.to_csv(os.path.join(args.save_dir, exp_id, f"parses.csv"))
+
             torch.save(
                 checkpoint, os.path.join(args.save_dir, exp_id, "checkpoint_last.pt")
             )
